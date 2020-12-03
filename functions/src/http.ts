@@ -6,13 +6,16 @@ import * as cors from 'cors';
 admin.initializeApp();
 
 export const basicHTTP = functions.https.onRequest((req, res) => {
+  functions.logger.info('Hello logs!', { structuredData: true });
   const name = req.query.name;
 
   if (!name) {
     res.status(401).json({ error: 'Error: Missing name param' });
+    return;
   }
 
   res.status(200).json({ message: `Hello, ${name}!` });
+  return;
 });
 
 const auth = (
