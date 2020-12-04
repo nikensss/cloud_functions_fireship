@@ -18,11 +18,7 @@ export const basicHTTP = functions.https.onRequest((req, res) => {
   return;
 });
 
-const auth = (
-  req: express.Request,
-  res: express.Response,
-  n: express.NextFunction
-): void => {
+const auth = (req: express.Request, res: express.Response, n: express.NextFunction): void => {
   if (!req.headers.authorization) {
     res.status(400).send('unauthorized');
     return;
@@ -37,11 +33,11 @@ app.use(cors({ origin: true }));
 app.use(auth);
 
 app.get('/cat', (req, res) => {
-  res.json({ cat: '🐈' });
+  return res.json({ cat: '🐈' });
 });
 
 app.get('/dog', (req, res) => {
-  res.json({ dog: '🦮' });
+  return res.json({ dog: '🦮' });
 });
 
 export const api = functions.https.onRequest(app);
