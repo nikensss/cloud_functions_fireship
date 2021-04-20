@@ -1,11 +1,7 @@
 import * as functions from 'firebase-functions';
-// import * as admin from 'firebase-admin';
-import * as express from 'express';
-import * as cors from 'cors';
+import { app } from './api';
 
-// admin.initializeApp();
-
-export const basicHTTP = functions.https.onRequest((req, res) => {
+export const basicHTTP = functions.region('europe-west1').https.onRequest((req, res) => {
   functions.logger.info('Hello logs!', { structuredData: true });
   const name = req.query.name;
 
@@ -18,26 +14,4 @@ export const basicHTTP = functions.https.onRequest((req, res) => {
   return;
 });
 
-const auth = (req: express.Request, res: express.Response, n: express.NextFunction): void => {
-  if (!req.headers.authorization) {
-    res.status(400).send('unauthorized');
-    return;
-  }
-
-  return n();
-};
-
-const app = express();
-
-app.use(cors({ origin: true }));
-app.use(auth);
-
-app.get('/cat', (req, res) => {
-  return res.json({ cat: '🐈' });
-});
-
-app.get('/dog', (req, res) => {
-  return res.json({ dog: '🦮' });
-});
-
-export const api = functions.https.onRequest(app);
+export const api = functions.region('europe-west1').https.onRequest(app);

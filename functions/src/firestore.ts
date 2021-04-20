@@ -15,14 +15,14 @@ export const gameCount = functions.firestore
     const userSnap = await userRef.get();
     const userData = userSnap.data();
 
-    return userRef.update({
+    return await userRef.update({
       gameCount: userData?.gameCount + 1
     });
   });
 
 export const userTrend = functions.firestore
   .document('games/{gameId}')
-  .onUpdate((snapshot, context) => {
+  .onUpdate(async (snapshot, context) => {
     const before = snapshot.before.data();
     const after = snapshot.after.data();
 
@@ -34,7 +34,33 @@ export const userTrend = functions.firestore
 
     const userRef = db.doc(`users/${before.uid}`);
 
-    return userRef.update({
+    return await userRef.update({
       trend
     });
+  });
+
+export const testFirestore = functions.region('europe-west1').https.onRequest(async (req, res) => {
+  console.log({ body: req.body });
+
+  const result = await admin
+    .firestore()
+    .collection('sfyProducts')
+    .doc(`${req.body.shop}`)
+    .set(req.body);
+
+  res.status(200).json({ result }).end();
+});
+
+export const testUpdateFirestore = functions
+  .region('europe-west1')
+  .https.onRequest(async (req, res) => {
+    console.log({ body: req.body });
+
+    const result = await admin
+      .firestore()
+      .collection('sfyProducts')
+      .doc(req.body.shop)
+      .set(req.body, { merge: true });
+
+    res.status(200).json({ result }).end();
   });
