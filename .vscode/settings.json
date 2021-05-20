@@ -1,3 +1,4 @@
 {
-  "cSpell.words": ["eqeqeq"]
+  "cSpell.words": ["eqeqeq"],
+  "eslint.workingDirectories": ["./functions"]
 }

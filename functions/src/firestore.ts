@@ -1,11 +1,11 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import * as functions from 'firebase-functions';
 
 const db = admin.firestore();
 
 export const gameCount = functions.firestore
   .document('games/{gameId}')
-  .onCreate(async (snapshot, context) => {
+  .onCreate(async (snapshot) => {
     //we make this function async so we make sure we return a promise
     //snapshot: snapshot of the document, so no updates are visible
     const data = snapshot.data();
@@ -22,7 +22,7 @@ export const gameCount = functions.firestore
 
 export const userTrend = functions.firestore
   .document('games/{gameId}')
-  .onUpdate(async (snapshot, context) => {
+  .onUpdate(async (snapshot) => {
     const before = snapshot.before.data();
     const after = snapshot.after.data();
 
