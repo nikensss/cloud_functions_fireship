@@ -1,16 +1,10 @@
-import {
-  initializeTestEnvironment,
-  RulesTestEnvironment
-} from '@firebase/rules-unit-testing';
+import { initializeTestEnvironment, RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { readFileSync } from 'fs';
 
 export const setup = async (
   data: Record<
     string,
-    Record<
-      string,
-      null | string | string[] | number | number[] | boolean | boolean[]
-    >
+    Record<string, null | string | string[] | number | number[] | boolean | boolean[]>
   >
 ) => {
   const rulesTestEnv = await initializeTestEnvironment({

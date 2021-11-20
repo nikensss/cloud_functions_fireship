@@ -24,9 +24,7 @@ const mockData = {
 
 describe('Database rules', () => {
   let rulesTestEnv: RulesTestEnvironment | undefined;
-  let authenticatedFirestore:
-    | ReturnType<RulesTestContext['firestore']>
-    | undefined;
+  let authenticatedFirestore: ReturnType<RulesTestContext['firestore']> | undefined;
 
   beforeAll(async () => {
     rulesTestEnv = await setup(mockData);
@@ -39,24 +37,21 @@ describe('Database rules', () => {
   });
 
   test('deny when reading an unauthorized collection', async () => {
-    if (!authenticatedFirestore)
-      return fail('Could not create authenticatedContext');
+    if (!authenticatedFirestore) return fail('Could not create authenticatedContext');
 
     const ref = authenticatedFirestore.doc('unauthorized-collection/doc');
     expect(await assertFails(ref.get()));
   });
 
   test('allow admin to read unpublished posts', async () => {
-    if (!authenticatedFirestore)
-      return fail('Could not create authenticatedContext');
+    if (!authenticatedFirestore) return fail('Could not create authenticatedContext');
 
     const ref = authenticatedFirestore.doc('posts/abc');
     expect(await assertSucceeds(ref.get()));
   });
 
   test('allow admin to update posts of other users', async () => {
-    if (!authenticatedFirestore)
-      return fail('Could not create authenticatedContext');
+    if (!authenticatedFirestore) return fail('Could not create authenticatedContext');
 
     const ref = authenticatedFirestore.doc('posts/abc');
     expect(await assertSucceeds(ref.set({ published: true })));
