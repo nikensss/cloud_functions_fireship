@@ -1,8 +1,8 @@
 {
   "name": "functions",
   "scripts": {
-    "pretty": "prettier --write \"src/**/*.ts\"",
-    "lint": "npm run pretty && eslint --fix \"src/**/*\"",
+    "pretty": "prettier --write 'src/**/*.ts'",
+    "lint": "npm run pretty && eslint --fix 'src/**/*.ts'",
     "prebuild": "rimraf ./lib",
     "build": "tsc",
     "preserve": "npm run build",

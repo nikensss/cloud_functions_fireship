@@ -1,0 +1,31 @@
+{
+  "devDependencies": {
+    "@commitlint/cli": "^15.0.0",
+    "@commitlint/config-conventional": "^15.0.0",
+    "@firebase/rules-unit-testing": "^2.0.1",
+    "@types/jest": "^27.0.3",
+    "@typescript-eslint/eslint-plugin": "^5.4.0",
+    "@typescript-eslint/parser": "^5.4.0",
+    "eslint": "^8.2.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "firebase-admin": "^10.0.0",
+    "husky": "^7.0.4",
+    "jest": "^27.3.1",
+    "prettier": "^2.4.1",
+    "ts-jest": "^27.0.7",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.5.2"
+  },
+  "dependencies": {
+    "@types/node": "^12.20.37"
+  },
+  "scripts": {
+    "pretty": "prettier --write 'tests/**/*.ts' 'functions/src/**/*.ts'",
+    "pretty:check": "prettier --check 'tests/**/*.ts' 'functions/src/**/*.ts'",
+    "lint": "eslint 'tests/**/*.ts' 'functions/src/**/*.ts'",
+    "prepare": "husky install",
+    "test": "jest --env=node",
+    "test:watch": "npm run pretest && jest --env=node --watch"
+  }
+}

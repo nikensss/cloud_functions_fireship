@@ -7,7 +7,40 @@ service cloud.firestore {
     
     match /users/{docId} {
       allow read: if request.auth.uid == resource.data.uid;
-      allow write: if request.auth.uid == request.resource.data.uid;
+      allow update: if request.auth.uid == request.resource.data.uid;
+    }
+
+    match /posts/{postId} {
+        allow read: if ( isSignedIn() && resource.data.published ) || hasAnyRole(['admin']);
+        allow create: if isValidNewPost() && hasAnyRole(['author']);
+        allow update: if isValidUpdatedPost() && hasAnyRole(['author', 'editor', 'admin']);
+        allow delete: if hasAnyRole(['admin']);
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function hasAnyRole(roles) {
+      return isSignedIn()
+              && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(roles)
+    }
+
+    function isValidNewPost() {
+      let post = request.resource.data;
+      let isOwner = post.uid == request.auth.uid;
+      let isNow = request.time == request.resource.data.createdAt;
+      let hasRequiredFields = post.keys().hasAll(['content', 'uid', 'createdAt', 'published']);
+
+      return isOwner && hasRequiredFields && isNow;
+    }
+
+    function isValidUpdatedPost() {
+      let post = request.resource.data;
+      let hasRequiredFields = post.keys().hasAny(['content', 'updatedAt', 'published']);
+      let isValidContent = !('content' in post) || post.content is string && post.content.size() < 5000;
+
+      return hasRequiredFields && isValidContent;
     }
   }
 }

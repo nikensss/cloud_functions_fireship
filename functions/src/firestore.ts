@@ -5,7 +5,7 @@ const db = admin.firestore();
 
 export const gameCount = functions.firestore
   .document('games/{gameId}')
-  .onCreate(async (snapshot) => {
+  .onCreate(async snapshot => {
     //we make this function async so we make sure we return a promise
     //snapshot: snapshot of the document, so no updates are visible
     const data = snapshot.data();
@@ -22,7 +22,7 @@ export const gameCount = functions.firestore
 
 export const userTrend = functions.firestore
   .document('games/{gameId}')
-  .onUpdate(async (snapshot) => {
+  .onUpdate(async snapshot => {
     const before = snapshot.before.data();
     const after = snapshot.after.data();
 
@@ -39,17 +39,19 @@ export const userTrend = functions.firestore
     });
   });
 
-export const testFirestore = functions.region('europe-west1').https.onRequest(async (req, res) => {
-  console.log({ body: req.body });
+export const testFirestore = functions
+  .region('europe-west1')
+  .https.onRequest(async (req, res) => {
+    console.log({ body: req.body });
 
-  const result = await admin
-    .firestore()
-    .collection('sfyProducts')
-    .doc(`${req.body.shop}`)
-    .set(req.body);
+    const result = await admin
+      .firestore()
+      .collection('sfyProducts')
+      .doc(`${req.body.shop}`)
+      .set(req.body);
 
-  res.status(200).json({ result }).end();
-});
+    res.status(200).json({ result }).end();
+  });
 
 export const testUpdateFirestore = functions
   .region('europe-west1')
