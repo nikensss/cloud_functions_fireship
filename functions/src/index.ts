@@ -4,6 +4,6 @@ import * as admin from 'firebase-admin';
 
 admin.initializeApp();
 
-export { createUserRecord } from './auth';
-export { gameCount, testFirestore, testUpdateFirestore, userTrend } from './firestore';
-export { api, basicHTTP } from './http';
+export { createUserRecord } from './auth/auth';
+export { gameCount, userTrend } from './firestore/firestore';
+export { api, basicHTTP, testFirestore, testUpdateFirestore } from './https/https';

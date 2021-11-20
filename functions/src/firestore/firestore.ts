@@ -34,29 +34,3 @@ export const userTrend = functions.firestore.document('games/{gameId}').onUpdate
     trend
   });
 });
-
-export const testFirestore = functions.region('europe-west1').https.onRequest(async (req, res) => {
-  console.log({ body: req.body });
-
-  const result = await admin
-    .firestore()
-    .collection('sfyProducts')
-    .doc(`${req.body.shop}`)
-    .set(req.body);
-
-  res.status(200).json({ result }).end();
-});
-
-export const testUpdateFirestore = functions
-  .region('europe-west1')
-  .https.onRequest(async (req, res) => {
-    console.log({ body: req.body });
-
-    const result = await admin
-      .firestore()
-      .collection('sfyProducts')
-      .doc(req.body.shop)
-      .set(req.body, { merge: true });
-
-    res.status(200).json({ result }).end();
-  });
