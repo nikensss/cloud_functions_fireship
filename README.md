@@ -454,3 +454,79 @@ function isBanned (uid) {
 
 We do not want any message to be deleted, so we use the `allow create`
 condition to enforce that.
+
+## Role-based authentication
+
+We have a `users` collection. In the document we have a `roles` property, which
+is an array of strings indicating the roles this user has. In such a situation,
+it is very important that users cannot update their own roles.
+
+We also have a `posts` collection. The documents in there have 4 fields:
+`content`, `published` (if it should be visible), `createdAt` and `uid` (the
+owner of the post).
+
+The rules look like this:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+
+      allow read: if isSignedIn();
+      allow update, delete: if hasAnyRole(['admin']);
+
+    }
+
+    match /posts/{postId} {
+        allow read: if ( isSignedIn() && resource.data.published ) || hasAnyRole(['admin']);
+        allow create: if isValidNewPost() && hasAnyRole(['author']);
+        allow update: if isValidUpdatedPost() && hasAnyRole(['author', 'editor', 'admin']);
+        allow delete: if hasAnyRole(['admin']);
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function hasAnyRole(roles) {
+      return isSignedIn()
+              && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(roles)
+    }
+
+    function isValidNewPost() {
+      let post = request.resource.data;
+      let isOwner = post.uid == request.auth.uid;
+      let isNow = request.time == request.resource.data.createdAt;
+      let hasRequiredFields = post.keys().hasAll(['content', 'uid', 'createdAt', 'published']);
+
+      return isOwner && hasRequiredFields && isNow;
+    }
+
+    function isValidUpdatedPost() {
+      let post = request.resource.data;
+      let hasRequiredFields = post.keys().hasAny(['content', 'updatedAt', 'published']);
+      let isValidContent = post.content is string && post.content.size() < 5000;
+
+      return hasRequiredFields && isValidContent;
+    }
+  }
+}
+```
+
+Let's break them down:
+
+- `match /users/${userId}`:
+  - read only if the user is singed in
+  - updates and deletes can only be performed by admins
+  - there are no create rules; the best way to do that is with a `firebase`
+    Cloud Function
+- `match /posts/{postId}`:
+  - reads are allowed for all users if the post is published, and reads are
+    always allowed for admins
+  - create operations are only allowed if the post is valid and if the user has
+    the `author` role
+  - update operations are allowed only if the update is valid and if the user
+    has at least one of `author`, `editor` or `admin` roles
+  - delete operations can only be done by admins
