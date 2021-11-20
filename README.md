@@ -32,6 +32,7 @@ followed by a block that containts `match /databases/{database}/documents`,
 which is boiler plate code that puts you at the root of the database:
 
 ```
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
@@ -80,7 +81,7 @@ match /users/{docId=**} {
 
 ### Last notes on matching
 
-As rules grow moew complex, it's important to keep in mind where in the
+As rules grow more complex, it's important to keep in mind where in the
 database tree we are, because it's really easy to place a `match` block in the
 wrong place.
 
@@ -133,8 +134,8 @@ All operations are blocked by default, so rules come in to start allowing some.
 
 ## Conditions
 
-The firebase rules env contains a buch of helper functions and objects to check
-for many things when checking if an operation should be allowed.
+The firebase rules env contains a bunch of helper functions and objects to
+check for many things when validating an operation.
 
 ### General syntax
 
@@ -166,11 +167,16 @@ Represents the incoming data from the client side application.
 Represents the data that already exists in the database. Important when the
 operation is an `update` or a `delete`.
 
-**_Important to note that the global `resource` object is not the
-`request.resource` object._**
+---
 
-A common security practice is to check immutable data on the document with data
-in the `request.resource` to make sure only that user can do modifications:
+**Important to note that the global `resource` object is not equal to the
+`request.resource` object.**
+
+---
+
+A common security practice is to check for data that we want to be immutable
+with the data in the `request.resource` to make sure users do not make any
+modifications:
 
 ```
 allow write: if request.resource.data.username == resource.data.username;
@@ -180,7 +186,7 @@ allow write: if request.resource.data.username == resource.data.username;
 
 ### Allow only authenticated users to read user information
 
-For social networks in which only logging is necessary to navigate it:
+For social networks in which logging is necessary to navigate it:
 
 ```
 match /users/{userId} {
@@ -221,7 +227,7 @@ fields that are being updated, and we check that only specific ones are there
 (only `text` and `status` can be updated).
 
 The `data` object has many useful methods that are explained in detail in the
-documentation. Check it out!
+[documentation](https://firebase.google.com/docs/firestore/security/get-started). Check it out!
 
 With all that, the final rule looks like:
 
@@ -236,3 +242,215 @@ match /todos/{docId} {
                 && request.resource.data.keys().hasOnly(['text', 'status'])
 }
 ```
+
+## Functions
+
+Useful to avoid code duplication in code. To define one:
+
+```
+function isLoggedIn() {
+
+}
+```
+
+They have access to the variables in that scope. Usually you'll want to put
+them at the same location as the root collection rules.
+
+The "is logged in" condition can be transformed into a function like so:
+
+```
+function isLoggedIn() {
+  return request.auth.uid != null;
+}
+```
+
+(functions can return more than booleans, like maps or lists)
+
+Another useful function would be to check if a document belong to the user that
+made a request:
+
+```
+function belongsTo(userId) {
+  return request.auth.uid == userId || request.auth.uid == resource.data.uid;
+}
+```
+
+Rules version 2 also supports variables inside functions. For the
+`canCreateTodo` function, we could use it like this:
+
+```
+function canCreateTodo() {
+  let uid = request.auth.uid;
+  let hasValidTimestamp = request.time == request.resource.data.createdAt;
+
+  return belongsTo(uid) && hasValidTimestamp;
+}
+```
+
+We can call functions inside functions, but the call stack is limited to 10.
+
+The final result for all our rules with functions would look like this:
+
+```
+match /users/{userId} {
+  allow read: if isLoggedIn();
+  allow write: if belongsTo(userId);
+}
+
+match /todos/{docId} {
+  allow read: if resource.data.status == 'published';
+
+  allow create: if canCreateTodo();
+
+  allow update: if canUpdateTodo()
+}
+
+function isLoggedIn() {
+  return request.auth.uid != null;
+}
+
+function belongsTo(userId) {
+  return request.auth.uid == userId || request.auth.uid == resource.data.uid;
+}
+
+function canCreateTodo() {
+  let uid = request.auth.uid;
+  let hasValidTimestamp = request.time == request.resource.data.createdAt;
+
+  return belongsTo(uid) && hasValidTimestamp;
+}
+
+function canUpdateTodo() {
+  let uid = request.auth.uid;
+  let hasMutableKeys = request.resource.data.keys().hasOnly(['text','status'])
+
+  return belongsTo(uid) && hasMutableKeys;
+}
+```
+
+## Read other documents
+
+Sometimes we might need more info than is available in either the `request` or
+the `resource` objects. For instance, in case a user is banned for not
+following the community guidelines.
+
+When banned, we add their user ID to the `banned` collection. And when
+reveiving a request, we have to check if the uid is not in there.
+
+Let's create rules, though, for a situtation in which users can only read docs
+if they have a profile, and users can only write (create, update, delete) if
+they are admins.
+
+We can use two methods:
+
+- `exists`: takes a path to a document and indicates if the document exists
+- `get`: takes a path to a document and returns its data
+
+These two functions count as database reads, so we will be billed for it. Use
+with extra caution!
+
+There're also two functions called `existsAfter` and `getAfter` meant to be
+used in combination with atomic operations.
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /todos/{docId} {
+      allow create: if request.auth != null
+                    &&
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid))
+
+      allow delete: if request.auth != null
+                    &&
+                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin == true
+    }
+  }
+}
+```
+
+We first check the request object to potentially save us a read from the
+database thanks to the shortcut using the `&&` operator. And a better approach
+(with functions):
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /todos/{docId} {
+      allow create: if isLoggedIn() && hasProfile(request.auth.uid);
+
+      allow delete: if isLoggedIn() && isAdmin(request.auth.uid)
+    }
+
+    functions isLoggedIn() {
+      return request.auth != null;
+    }
+
+    functions hasProfile(uid){
+      return exists(/databases/$(database)/documents/users/$(uid))
+    }
+
+    functions isAdmin(uid){
+      return get(/databases/$(database)/documents/users/$(uid)).data.admin == true;
+    }
+  }
+}
+```
+
+## Chat example
+
+From the `Create a chat app in 7 minutes` video, the database is structred as
+follows:
+
+- `users`: one doc per registered user (one to one)
+- `messages`: one per message, with the `text` of the message, a `createdAt`
+  timestamp, the `uid` of the user, and a `photoURL`
+
+### What did people exploit?
+
+- message length: users created very long messages, so we need to validate the
+  length of the `text` to be less than 255 characters
+- spoofed user ID: requests from the frontend can be duplicated from Postman
+  and data can be basically anything
+- used future timestamps
+- posted profanity: banned those users by creating a document in the `banned`
+  collection and ID-ing that document with the user's ID (empty docs, so we
+  only need to check for existence)
+
+### The Rules
+
+We first lockdown all documents in the database explicitly (not needed, but
+it's nice to have that as a reminder):
+
+```
+match /{document=**} {
+  allow read, write: if false;
+}
+```
+
+Then the rules for the `messages` collections:
+
+```
+match /messages/{docId} {
+  allow read: if request.auth.uid != null;
+  allow create: if canCreateMessage();
+}
+
+function canCreateMessage() {
+  let uid = request.auth.uid;
+  let isSignedIn = uid != null;
+  let isOwner = request.auth.uid == request.resource.data.uid;
+  let isNotTooLong = request.resource.data.text.size() < 255;
+  let isNow = request.time == request.resource.data.createdAt;
+
+  return isSignedIn && isOwner && isNotTooLong && isNow && !isBanned(uid)
+}
+
+function isBanned (uid) {
+  return exists(/databases/$(database)/documents/banned/$(uid));
+}
+```
+
+We do not want any message to be deleted, so we use the `allow create`
+condition to enforce that.
